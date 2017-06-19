@@ -3,11 +3,11 @@ require "formula"
 class Prosody < Formula
   homepage "http://prosody.im"
 
-  url "https://prosody.im/downloads/source/prosody-0.9.11.tar.gz"
-  sha256 "32bff4c323747f768c61b5c9a23790126d33258e96d4e589920b4c3d88b67256"
-  version "0.9.11"
+  # url "https://prosody.im/downloads/source/prosody-0.9.11.tar.gz"
+  # sha256 "32bff4c323747f768c61b5c9a23790126d33258e96d4e589920b4c3d88b67256"
+  # version "0.9.11"
 
-  # url "https://hg.prosody.im/0.9/", :using => :hg
+  head "https://hg.prosody.im/trunk/", :using => :hg
   # revision 1
 
   depends_on "lua51"
@@ -24,19 +24,22 @@ class Prosody < Formula
     sha256 "e429e0af9764bfd5cb640cac40f9d4ed1023fa17c052dff82ed0a41c05f3dcf9"
   end
 
+  patch :DATA
+
   def install
     # Install to the Cellar, but direct modules to prefix
     # Specify where the Lua is to avoid accidental conflict.
     lua_prefix = Formula["lua51"].opt_prefix
     openssl = Formula["openssl"]
+    libidn = Formula["libidn"]
 
     # set CFLAGS/LDFLAGS based on host OS (for shared libraries)
     if OS.linux?
         cflags = "-fPIC -I#{openssl.opt_include}"
         ldflags = "-shared -L#{openssl.opt_lib}"
     else
-        cflags = "-I#{openssl.opt_include}"
-        ldflags = "-bundle -undefined dynamic_lookup -L#{openssl.opt_lib}"
+        cflags = "-I#{openssl.opt_include} -I#{libidn.opt_include}"
+        ldflags = "-bundle -undefined dynamic_lookup -L#{openssl.opt_lib} -L#{libidn.opt_lib}"
     end
 
     args = ["--prefix=#{prefix}",
@@ -48,17 +51,12 @@ class Prosody < Formula
             "--cflags=#{cflags}",
             "--ldflags=#{ldflags}"]
 
-    # FIXME remove in next Prosody release, fixing a GNUism
-    inreplace 'certs/Makefile' do |s|
-      s.sub! '@chmod 400 $@ -c', '@chmod 400 $@'
-    end
-
     system "./configure", *args
     system "make"
 
     # patch config
     inreplace 'prosody.cfg.lua.install' do |s|
-      s.sub! '--"posix";', '"posix";'
+      s.sub! '-- "posix";', '"posix";'
       s.sub! 'info = "prosody.log";', "-- info = \"#{var}/log/prosody/prosody.log\";"
       s.sub! 'error = "prosody.err";', "-- error = \"#{var}/log/prosody/prosody.err\";"
       # s.sub! '-- "*syslog";', '"*syslog";'
@@ -112,7 +110,7 @@ class Prosody < Formula
     system "#{bin}/prosody-luarocks", "install", "luasec"
     system "#{bin}/prosody-luarocks", "install", "luafilesystem"
     system "#{bin}/prosody-luarocks", "install", "luaexpat", "EXPAT_DIR=#{Formula["expat"].opt_prefix}"
-    # system "#{bin}/prosody-luarocks", "install", "lua-zlib"
+    system "#{bin}/prosody-luarocks", "install", "luabitop"
   end
 
   # TODO more detailed
@@ -130,4 +128,29 @@ class Prosody < Formula
   end
 end
 
-# external_deps_dirs = { "/usr/local/opt/openssl" }
+__END__
+diff -r 4720f5ec4171 util-src/pposix.c
+--- a/util-src/pposix.c	Sat May 20 15:00:50 2017 +0200
++++ b/util-src/pposix.c	Tue May 23 21:12:59 2017 -0700
+@@ -517,21 +517,6 @@
+ 		return RLIMIT_STACK;
+ 	}
+ 
+-#if !(defined(sun) || defined(__sun))
+-
+-	if(!strcmp(s, "MEMLOCK")) {
+-		return RLIMIT_MEMLOCK;
+-	}
+-
+-	if(!strcmp(s, "NPROC")) {
+-		return RLIMIT_NPROC;
+-	}
+-
+-	if(!strcmp(s, "RSS")) {
+-		return RLIMIT_RSS;
+-	}
+-
+-#endif
+ #ifdef RLIMIT_NICE
+ 
+ 	if(!strcmp(s, "NICE")) {
