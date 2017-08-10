@@ -15,9 +15,9 @@ class Prosody < Formula
   depends_on "libidn"
   depends_on "openssl"
 
-  fails_with :llvm do
-    cause "Lua itself compiles with llvm, but may fail when other software tries to link."
-  end
+  # fails_with :llvm do
+  #   cause "Lua itself compiles with llvm, but may fail when other software tries to link."
+  # end
 
   resource "luarocks" do
     url "http://luarocks.github.io/luarocks/releases/luarocks-2.4.1.tar.gz"
