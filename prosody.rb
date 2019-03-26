@@ -20,7 +20,7 @@ class Prosody < Formula
     sha256 "e429e0af9764bfd5cb640cac40f9d4ed1023fa17c052dff82ed0a41c05f3dcf9"
   end
 
-  patch :DATA
+  # patch :DATA
 
   def install
     # Install to the Cellar, but direct modules to prefix
@@ -95,7 +95,7 @@ class Prosody < Formula
     # set lua paths for our prosody-luarocks
     inreplace ["#{prefix}/bin/prosody", "#{prefix}/bin/prosodyctl"] do |s|
       rep = "-- Will be modified by configure script if run --"
-      luapaths = <<-EOS.undent.chomp
+      luapaths = <<-EOS
       package.path=[[#{libexec}/share/lua/5.1/?.lua;#{libexec}/share/lua/5.1/?/init.lua]];
       package.cpath=[[#{libexec}/lib/lua/5.1/?.so]];
       EOS
@@ -110,7 +110,7 @@ class Prosody < Formula
   end
 
   # TODO more detailed
-  def caveats; <<-EOS.undent
+  def caveats; <<-EOS
     Prosody configs in: #{etc}/prosody
     Rocks install to: #{libexec}/lib/luarocks/rocks
 
